@@ -1,5 +1,5 @@
 # 모듈 호출 및 초기화
-import pygame, sys
+import pygame, sys, random
 pygame.init()
 clock = pygame.time.Clock()
 
@@ -12,7 +12,7 @@ def img_load(obj):
 width = 480 # 가로 크기
 height = 640 # 세로 크기
 pad = pygame.display.set_mode((width, height)) # 화면 크기설정
-pygame.display.set_caption('게임은 건강에 좋지 않아요.')
+pygame.display.set_caption('Shooting Game')
 
 #배경 설정
 bg = img_load('bg')[0] # 배경 이미지 로드
@@ -24,17 +24,26 @@ py = height * 0.85 # 전투기 Y좌표
 ps = 0 # 전투기 속도
 
 #운석 그리기
-r, rw, rh = img_load('rock01') # 운석 이미지 로드
-rx = width / 2 - (rw / 2) # 운석의 x 좌표(화면의 중앙)
+rlist = ['rock01', 'rock02', 'rock03', 'rock04', 'rock05', 'rock06', 'rock07', 'rock08', 'rock09']
+r, rw, rh = img_load(random.choice(rlist)) # 운석 이미지 로드
+rx = random.randint(0, width - rw) # 운석의 x좌표
 ry = 0
-rs = 7 #운석 속도
+rs = 5 # 운석 속도
+
+def rock_init():
+    global r, rw, rh, rx, ry
+    r, rw, rh = img_load(random.choice(rlist)) # 운석 이미지 랜덤 로드
+    rx = random.randint(0, width - rw) # 운석의 랜덤 x좌표
+    ry = 0
 
 #미사일 설정
-m, mw, mh = img_load('missile') #미사일 이미지 로드
-mx = px + pw / 2 - mw / 2 # 미사일의 x좌표
+m, mw, mh = img_load('missile') # 미사일 이미지 로드
+mx = px + pw / 2 - mw / 2 # 미사일의 초기 x좌표
 my = py - mh # 미사일의 초기 y좌표
-mlist = [] #미사일 여러 개 담을 리스트
+mlist = [] # 미사일 여러 개 담을 리스트
 
+#충돌 이미지 설정
+exp = img_load('explosion')[0]
 
 pad.blit(bg, (0, 0))
 pad.blit(p, (px, py))
@@ -49,34 +58,45 @@ while True:
             pygame.quit() # pygame 종료
             sys.exit() # 창 종료
         if event.type in [pygame.KEYDOWN]: # 키 다운 감지
-            if event.key == pygame.K_LEFT: #왼쪽 화살표 다운
-                ps = -5 # 왼쪽으로 이동 
+            if event.key == pygame.K_LEFT: # 왼쪽 화살표 다운
+                ps = -5 # 왼쪽으로 이동
             elif event.key == pygame.K_RIGHT: # 오른쪽 화살표 다운
                 ps = 5 # 오른쪽으로 이동
             elif event.key == pygame.K_SPACE: # 스페이스 키 다운
-                mx = px + pw / 2 - mw / 2 #미사일 x좌표
+                mx = px + pw / 2 - mw / 2 # 미사일 x좌표
                 my = py - mh # 미사일 y좌표
-                mlist.append([mx,my]) # 발사한 미사일을 리스트에 추가
+                mlist.append([mx, my]) # 발사한 미사일을 리스트에 추가
         # if event.type in [pygame.KEYUP]: # 키 업 감지
-        #     if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT: #왼쪽 또는 오른쪽 화살표 업
+        #     if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT: # 왼쪽 또는 오른쪽 화살표 업
         #         ps = 0 # 전투기 멈춤
 
     px += ps # 전투기 속도만큼 이동. for문 밖에 있음. 위치 중요!
     if px < 0:
         px = 0 # 전투기가 왼쪽을 벗어나면 x좌표를 0으로 고정
     elif px > width - pw:
-        px = width - pw # 전투기가 오른쪽을 벗어나면 x좌표를 width - pw 고정
-    pad.blit(bg,(0,0)) # 배경 그리기
-    pad.blit(p, (px,py)) # 전투기 그리기
+        px = width - pw # 전투기가 오른쪽을 벗어나면 x좌표를 width - pw로 고정
+    pad.blit(bg, (0, 0)) # 배경 그리기
+    pad.blit(p, (px, py)) # 전투기 그리기
 
     ry += rs # 운석 떨어뜨리기
     if ry > height:
-        ry = 0 # 운석이 다 떨어지면 다시 출발
-    pad.blit(r,(rx,ry)) # 바위 그리기
+        rock_init() # 랜덤 운석 초기화
+    pad.blit(r, (rx, ry)) # 바위 그리기
 
-    if len(mlist) != 0: # 밈사일 리스트가 비어있지 않으면
+    # 전투기와 운석 충돌 체크
+    if(py < ry + rh) and (px < rx + rw) and (px + pw > rx):
+        pad.blit(exp, (rx, ry)) # 충돌 이미지 그리기
+        rock_init() # 랜덤 운석 초기화
+
+    if len(mlist) != 0: # 미사일 리스트가 비어있지 않으면
         for mis in mlist:
             mis[1] -= 10 # 미사일이 전진함
-            pad.blit(m, (mis[0], mis[1])) #미사일 그리기
+            if (mis[1] < ry + rh) and (mis[0] < rx + rw) and (mis[0] + mw > rx):
+                mlist.remove(mis) # 미사일을 리스트에서 제거
+                pad.blit(exp, (rx, ry)) # 충돌 이미지 그리기
+                rock_init() # 랜덤 운석 초기화
+            elif mis[1] < 0 - mh: # 미사일의 꼬리가 화면을 벗어나면
+                mlist.remove(mis) # 미사일을 리스트에서 제거
+            pad.blit(m, (mis[0], mis[1])) # 미사일 그리기
     pygame.display.update()
-    clock.tick(50) 
+    clock.tick(50)
